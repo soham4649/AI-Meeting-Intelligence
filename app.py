@@ -3,16 +3,14 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-# =========================================================
-# NLP ENGINE
-# =========================================================
+# ==============================
+# NLP ANALYSIS
+# ==============================
 
 def analyze_meeting(meeting_text):
 
-    # Clean text
     meeting_text = meeting_text.strip()
 
-    # Split into sentences
     sentences = re.split(
         r'(?<=[.!?])\s+',
         meeting_text
@@ -24,9 +22,9 @@ def analyze_meeting(meeting_text):
         if s.strip()
     ]
 
-    # -----------------------------------------------------
-    # PARTICIPANT DETECTION
-    # -----------------------------------------------------
+    # --------------------------
+    # PARTICIPANTS
+    # --------------------------
 
     participants = []
 
@@ -38,14 +36,15 @@ def analyze_meeting(meeting_text):
         )
 
         if match:
+
             name = match.group(1)
 
             if name not in participants:
                 participants.append(name)
 
-    # -----------------------------------------------------
-    # ACTION ITEM DETECTION
-    # -----------------------------------------------------
+    # --------------------------
+    # ACTION ITEMS
+    # --------------------------
 
     action_keywords = [
         "will",
@@ -66,7 +65,9 @@ def analyze_meeting(meeting_text):
         "fix",
         "design",
         "test",
-        "implement"
+        "implement",
+        "work on",
+        "handle"
     ]
 
     action_items = []
@@ -80,7 +81,6 @@ def analyze_meeting(meeting_text):
             for keyword in action_keywords
         ):
 
-            # Person
             name_match = re.match(
                 r'([A-Z][a-zA-Z]+)\s*:',
                 sentence
@@ -92,15 +92,13 @@ def analyze_meeting(meeting_text):
                 else "Unassigned"
             )
 
-            # Deadline
+            # Deadline detection
+
             deadline_match = re.search(
-                r'\b('
-                r'Monday|Tuesday|Wednesday|Thursday|'
+                r'\b(Monday|Tuesday|Wednesday|Thursday|'
                 r'Friday|Saturday|Sunday|'
-                r'today|tomorrow|'
-                r'next week|next month|'
-                r'this week'
-                r')\b',
+                r'today|tomorrow|next week|next month|'
+                r'this week|this month)\b',
                 sentence,
                 re.IGNORECASE
             )
@@ -111,22 +109,43 @@ def analyze_meeting(meeting_text):
                 else "Not specified"
             )
 
-            # Task
+            # Remove person name
+
             task = re.sub(
                 r'^[A-Z][a-zA-Z]+\s*:\s*',
                 '',
                 sentence
             )
 
-            action_items.append({
-                "Person": person,
-                "Task": task,
-                "Deadline": deadline
-            })
+            # Priority
 
-    # -----------------------------------------------------
-    # KEY DECISION DETECTION
-    # -----------------------------------------------------
+            if any(
+                word in sentence_lower
+                for word in [
+                    "urgent",
+                    "asap",
+                    "immediately",
+                    "critical",
+                    "high priority"
+                ]
+            ):
+                priority = "High"
+
+            else:
+                priority = "Normal"
+
+            action_items.append(
+                {
+                    "Person": person,
+                    "Task": task,
+                    "Deadline": deadline,
+                    "Priority": priority
+                }
+            )
+
+    # --------------------------
+    # KEY DECISIONS
+    # --------------------------
 
     decision_keywords = [
         "decided",
@@ -159,9 +178,9 @@ def analyze_meeting(meeting_text):
 
             key_decisions.append(decision)
 
-    # -----------------------------------------------------
-    # SUMMARY USING TF-IDF
-    # -----------------------------------------------------
+    # --------------------------
+    # SUMMARY
+    # --------------------------
 
     if len(sentences) <= 3:
 
@@ -169,30 +188,47 @@ def analyze_meeting(meeting_text):
 
     else:
 
-        vectorizer = TfidfVectorizer(
-            stop_words="english"
-        )
+        try:
 
-        matrix = vectorizer.fit_transform(sentences)
+            vectorizer = TfidfVectorizer(
+                stop_words="english"
+            )
 
-        scores = matrix.sum(axis=1).A1
+            matrix = vectorizer.fit_transform(
+                sentences
+            )
 
-        number_of_sentences = min(4, len(sentences))
+            scores = matrix.sum(
+                axis=1
+            ).A1
 
-        top_indices = scores.argsort()[
-            -number_of_sentences:
-        ][::-1]
+            number_of_sentences = min(
+                4,
+                len(sentences)
+            )
 
-        top_indices = sorted(top_indices)
+            top_indices = scores.argsort()[
+                -number_of_sentences:
+            ][::-1]
 
-        summary = " ".join(
-            sentences[i]
-            for i in top_indices
-        )
+            top_indices = sorted(
+                top_indices
+            )
 
-    # -----------------------------------------------------
-    # PRIORITY DETECTION
-    # -----------------------------------------------------
+            summary = " ".join(
+                sentences[i]
+                for i in top_indices
+            )
+
+        except:
+
+            summary = " ".join(
+                sentences[:4]
+            )
+
+    # --------------------------
+    # MEETING PRIORITY
+    # --------------------------
 
     urgent_words = [
         "urgent",
@@ -203,17 +239,18 @@ def analyze_meeting(meeting_text):
         "high priority"
     ]
 
-    priority = "Normal"
+    priority = (
+        "High"
+        if any(
+            word in meeting_text.lower()
+            for word in urgent_words
+        )
+        else "Normal"
+    )
 
-    if any(
-        word in meeting_text.lower()
-        for word in urgent_words
-    ):
-        priority = "High"
-
-    # -----------------------------------------------------
-    # MEETING TONE
-    # -----------------------------------------------------
+    # --------------------------
+    # SIMPLE TONE
+    # --------------------------
 
     positive_words = [
         "good",
@@ -244,33 +281,42 @@ def analyze_meeting(meeting_text):
     )
 
     if positive_count > negative_count:
+
         tone = "Positive"
 
     elif negative_count > positive_count:
+
         tone = "Concerned"
 
     else:
+
         tone = "Neutral"
 
-    # -----------------------------------------------------
-    # RETURN RESULTS
-    # -----------------------------------------------------
-
     return {
+
         "summary": summary,
+
         "participants": participants,
+
         "action_items": action_items,
+
         "key_decisions": key_decisions,
+
         "priority": priority,
+
         "tone": tone,
+
         "sentence_count": len(sentences),
-        "word_count": len(meeting_text.split())
+
+        "word_count": len(
+            meeting_text.split()
+        )
     }
 
 
-# =========================================================
-# STREAMLIT CONFIG
-# =========================================================
+# ==============================
+# PAGE CONFIGURATION
+# ==============================
 
 st.set_page_config(
     page_title="AI Meeting Intelligence",
@@ -279,9 +325,9 @@ st.set_page_config(
 )
 
 
-# =========================================================
+# ==============================
 # CUSTOM CSS
-# =========================================================
+# ==============================
 
 st.markdown(
     """
@@ -299,13 +345,6 @@ st.markdown(
         margin-bottom: 25px;
     }
 
-    .metric-card {
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #ddd;
-        text-align: center;
-    }
-
     .section-title {
         font-size: 24px;
         font-weight: 600;
@@ -318,12 +357,14 @@ st.markdown(
 )
 
 
-# =========================================================
+# ==============================
 # HEADER
-# =========================================================
+# ==============================
 
 st.markdown(
-    '<div class="main-title">🤖 AI Meeting Intelligence</div>',
+    '<div class="main-title">'
+    '🤖 AI Meeting Intelligence'
+    '</div>',
     unsafe_allow_html=True
 )
 
@@ -335,9 +376,76 @@ st.markdown(
 )
 
 
-# =========================================================
-# DEMO TEXT
-# =========================================================
+# ==============================
+# INPUT METHOD
+# ==============================
+
+st.subheader("🎙️ Meeting Input")
+
+input_method = st.radio(
+    "Choose how you want to provide the meeting:",
+    [
+        "✍️ Paste Transcript",
+        "📄 Upload TXT File"
+    ],
+    horizontal=True
+)
+
+
+meeting_text = ""
+
+
+# ==============================
+# PASTE TRANSCRIPT
+# ==============================
+
+if input_method == "✍️ Paste Transcript":
+
+    meeting_text = st.text_area(
+        "Paste your meeting conversation",
+        height=280,
+        placeholder=(
+            "Example:\n\n"
+            "Rahul: I will complete the project by Friday.\n"
+            "Priya: I will review the dataset tomorrow.\n"
+            "Aman: We decided to use Python."
+        )
+    )
+
+
+# ==============================
+# FILE UPLOAD
+# ==============================
+
+else:
+
+    uploaded_file = st.file_uploader(
+        "Upload meeting transcript",
+        type=["txt"]
+    )
+
+    if uploaded_file is not None:
+
+        meeting_text = (
+            uploaded_file
+            .read()
+            .decode("utf-8")
+        )
+
+        st.success(
+            "Meeting transcript uploaded successfully!"
+        )
+
+        st.text_area(
+            "Uploaded Transcript",
+            meeting_text,
+            height=220
+        )
+
+
+# ==============================
+# DEMO BUTTON
+# ==============================
 
 demo_text = """Rahul: We need to complete the NLP project presentation by Friday.
 Priya: I will clean the dataset and submit it tomorrow.
@@ -347,56 +455,21 @@ Priya: The team should review the final model before Monday.
 Aman: This is a high priority task because the presentation is next week."""
 
 
-# =========================================================
-# BUTTONS
-# =========================================================
+if st.button(
+    "🧪 Load Demo Meeting",
+    use_container_width=True
+):
 
-col1, col2 = st.columns(2)
+    meeting_text = demo_text
 
-with col1:
-
-    if st.button(
-        "🧪 Load Demo Meeting",
-        use_container_width=True
-    ):
-
-        st.session_state["meeting"] = demo_text
-
-
-with col2:
-
-    if st.button(
-        "🗑️ Clear",
-        use_container_width=True
-    ):
-
-        st.session_state["meeting"] = ""
-
-
-# =========================================================
-# INPUT
-# =========================================================
-
-if "meeting" not in st.session_state:
-
-    st.session_state["meeting"] = ""
-
-
-meeting_text = st.text_area(
-    "🎙️ Meeting Conversation",
-    value=st.session_state["meeting"],
-    height=280,
-    placeholder=(
-        "Paste your meeting transcript here...\n\n"
-        "Example:\n"
-        "Rahul: I will complete the report by Friday."
+    st.info(
+        "Demo meeting loaded. Click Analyze Meeting below."
     )
-)
 
 
-# =========================================================
-# ANALYZE
-# =========================================================
+# ==============================
+# ANALYZE BUTTON
+# ==============================
 
 if st.button(
     "🚀 Analyze Meeting",
@@ -407,23 +480,28 @@ if st.button(
     if not meeting_text.strip():
 
         st.warning(
-            "Please enter a meeting conversation first."
+            "Please paste a meeting transcript or upload a TXT file."
         )
 
     else:
 
-        result = analyze_meeting(meeting_text)
+        result = analyze_meeting(
+            meeting_text
+        )
 
         st.success(
             "Meeting analyzed successfully!"
         )
 
-        # -------------------------------------------------
-        # METRICS
-        # -------------------------------------------------
+
+        # ==========================
+        # OVERVIEW
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">📊 Meeting Overview</div>',
+            '<div class="section-title">'
+            '📊 Meeting Overview'
+            '</div>',
             unsafe_allow_html=True
         )
 
@@ -453,30 +531,40 @@ if st.button(
                 result["priority"]
             )
 
-        # -------------------------------------------------
+
+        # ==========================
         # SUMMARY
-        # -------------------------------------------------
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">📝 Meeting Summary</div>',
+            '<div class="section-title">'
+            '📝 Meeting Summary'
+            '</div>',
             unsafe_allow_html=True
         )
 
-        st.info(result["summary"])
+        st.info(
+            result["summary"]
+        )
 
-        # -------------------------------------------------
+
+        # ==========================
         # PARTICIPANTS
-        # -------------------------------------------------
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">👥 Participants</div>',
+            '<div class="section-title">'
+            '👥 Participants'
+            '</div>',
             unsafe_allow_html=True
         )
 
         if result["participants"]:
 
             st.write(
-                " • ".join(result["participants"])
+                " • ".join(
+                    result["participants"]
+                )
             )
 
         else:
@@ -485,12 +573,15 @@ if st.button(
                 "No named participants detected."
             )
 
-        # -------------------------------------------------
+
+        # ==========================
         # ACTION ITEMS
-        # -------------------------------------------------
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">✅ Action Items</div>',
+            '<div class="section-title">'
+            '✅ Action Items'
+            '</div>',
             unsafe_allow_html=True
         )
 
@@ -513,24 +604,33 @@ if st.button(
                         f"**Deadline:** {item['Deadline']}"
                     )
 
+                    st.write(
+                        f"**Priority:** {item['Priority']}"
+                    )
+
         else:
 
             st.info(
                 "No action items detected."
             )
 
-        # -------------------------------------------------
-        # DECISIONS
-        # -------------------------------------------------
+
+        # ==========================
+        # KEY DECISIONS
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">💡 Key Decisions</div>',
+            '<div class="section-title">'
+            '💡 Key Decisions'
+            '</div>',
             unsafe_allow_html=True
         )
 
         if result["key_decisions"]:
 
-            for decision in result["key_decisions"]:
+            for decision in result[
+                "key_decisions"
+            ]:
 
                 st.success(
                     f"✓ {decision}"
@@ -542,34 +642,45 @@ if st.button(
                 "No major decisions detected."
             )
 
-        # -------------------------------------------------
+
+        # ==========================
         # INSIGHTS
-        # -------------------------------------------------
+        # ==========================
 
         st.markdown(
-            '<div class="section-title">🧠 Meeting Insights</div>',
+            '<div class="section-title">'
+            '🧠 Meeting Insights'
+            '</div>',
             unsafe_allow_html=True
         )
 
-        st.write(
-            f"**Meeting Tone:** {result['tone']}"
-        )
+        i1, i2, i3 = st.columns(3)
 
-        st.write(
-            f"**Priority:** {result['priority']}"
-        )
+        with i1:
 
-        st.write(
-            f"**Sentences:** {result['sentence_count']}"
-        )
+            st.metric(
+                "Meeting Tone",
+                result["tone"]
+            )
 
-        st.write(
-            f"**Words:** {result['word_count']}"
-        )
+        with i2:
 
-        # -------------------------------------------------
-        # DOWNLOAD REPORT
-        # -------------------------------------------------
+            st.metric(
+                "Sentences",
+                result["sentence_count"]
+            )
+
+        with i3:
+
+            st.metric(
+                "Words",
+                result["word_count"]
+            )
+
+
+        # ==========================
+        # REPORT
+        # ==========================
 
         report = f"""
 AI MEETING INTELLIGENCE REPORT
@@ -589,19 +700,25 @@ ACTION ITEMS
             report += (
                 f"\nPerson: {item['Person']}"
                 f"\nTask: {item['Task']}"
-                f"\nDeadline: {item['Deadline']}\n"
+                f"\nDeadline: {item['Deadline']}"
+                f"\nPriority: {item['Priority']}\n"
             )
 
         report += "\nKEY DECISIONS\n"
 
-        for decision in result["key_decisions"]:
+        for decision in result[
+            "key_decisions"
+        ]:
 
-            report += f"- {decision}\n"
+            report += (
+                f"- {decision}\n"
+            )
 
         report += (
             f"\nMEETING TONE: {result['tone']}"
-            f"\nPRIORITY: {result['priority']}"
+            f"\nMEETING PRIORITY: {result['priority']}"
         )
+
 
         st.download_button(
             "📥 Download Meeting Report",

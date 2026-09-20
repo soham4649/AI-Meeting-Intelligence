@@ -1,11 +1,12 @@
 import streamlit as st
 import re
+from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-# ==============================
+# ==========================================
 # NLP ANALYSIS
-# ==============================
+# ==========================================
 
 def analyze_meeting(meeting_text):
 
@@ -22,9 +23,9 @@ def analyze_meeting(meeting_text):
         if s.strip()
     ]
 
-    # --------------------------
+    # --------------------------------------
     # PARTICIPANTS
-    # --------------------------
+    # --------------------------------------
 
     participants = []
 
@@ -42,9 +43,9 @@ def analyze_meeting(meeting_text):
             if name not in participants:
                 participants.append(name)
 
-    # --------------------------
+    # --------------------------------------
     # ACTION ITEMS
-    # --------------------------
+    # --------------------------------------
 
     action_keywords = [
         "will",
@@ -92,8 +93,6 @@ def analyze_meeting(meeting_text):
                 else "Unassigned"
             )
 
-            # Deadline detection
-
             deadline_match = re.search(
                 r'\b(Monday|Tuesday|Wednesday|Thursday|'
                 r'Friday|Saturday|Sunday|'
@@ -109,15 +108,11 @@ def analyze_meeting(meeting_text):
                 else "Not specified"
             )
 
-            # Remove person name
-
             task = re.sub(
                 r'^[A-Z][a-zA-Z]+\s*:\s*',
                 '',
                 sentence
             )
-
-            # Priority
 
             if any(
                 word in sentence_lower
@@ -130,22 +125,19 @@ def analyze_meeting(meeting_text):
                 ]
             ):
                 priority = "High"
-
             else:
                 priority = "Normal"
 
-            action_items.append(
-                {
-                    "Person": person,
-                    "Task": task,
-                    "Deadline": deadline,
-                    "Priority": priority
-                }
-            )
+            action_items.append({
+                "Person": person,
+                "Task": task,
+                "Deadline": deadline,
+                "Priority": priority
+            })
 
-    # --------------------------
+    # --------------------------------------
     # KEY DECISIONS
-    # --------------------------
+    # --------------------------------------
 
     decision_keywords = [
         "decided",
@@ -163,10 +155,8 @@ def analyze_meeting(meeting_text):
 
     for sentence in sentences:
 
-        sentence_lower = sentence.lower()
-
         if any(
-            keyword in sentence_lower
+            keyword in sentence.lower()
             for keyword in decision_keywords
         ):
 
@@ -178,9 +168,9 @@ def analyze_meeting(meeting_text):
 
             key_decisions.append(decision)
 
-    # --------------------------
+    # --------------------------------------
     # SUMMARY
-    # --------------------------
+    # --------------------------------------
 
     if len(sentences) <= 3:
 
@@ -198,9 +188,7 @@ def analyze_meeting(meeting_text):
                 sentences
             )
 
-            scores = matrix.sum(
-                axis=1
-            ).A1
+            scores = matrix.sum(axis=1).A1
 
             number_of_sentences = min(
                 4,
@@ -211,9 +199,7 @@ def analyze_meeting(meeting_text):
                 -number_of_sentences:
             ][::-1]
 
-            top_indices = sorted(
-                top_indices
-            )
+            top_indices = sorted(top_indices)
 
             summary = " ".join(
                 sentences[i]
@@ -226,9 +212,9 @@ def analyze_meeting(meeting_text):
                 sentences[:4]
             )
 
-    # --------------------------
+    # --------------------------------------
     # MEETING PRIORITY
-    # --------------------------
+    # --------------------------------------
 
     urgent_words = [
         "urgent",
@@ -248,9 +234,9 @@ def analyze_meeting(meeting_text):
         else "Normal"
     )
 
-    # --------------------------
-    # SIMPLE TONE
-    # --------------------------
+    # --------------------------------------
+    # TONE
+    # --------------------------------------
 
     positive_words = [
         "good",
@@ -281,42 +267,27 @@ def analyze_meeting(meeting_text):
     )
 
     if positive_count > negative_count:
-
         tone = "Positive"
-
     elif negative_count > positive_count:
-
         tone = "Concerned"
-
     else:
-
         tone = "Neutral"
 
     return {
-
         "summary": summary,
-
         "participants": participants,
-
         "action_items": action_items,
-
         "key_decisions": key_decisions,
-
         "priority": priority,
-
         "tone": tone,
-
         "sentence_count": len(sentences),
-
-        "word_count": len(
-            meeting_text.split()
-        )
+        "word_count": len(meeting_text.split())
     }
 
 
-# ==============================
-# PAGE CONFIGURATION
-# ==============================
+# ==========================================
+# PAGE CONFIG
+# ==========================================
 
 st.set_page_config(
     page_title="AI Meeting Intelligence",
@@ -325,9 +296,9 @@ st.set_page_config(
 )
 
 
-# ==============================
+# ==========================================
 # CUSTOM CSS
-# ==============================
+# ==========================================
 
 st.markdown(
     """
@@ -357,9 +328,9 @@ st.markdown(
 )
 
 
-# ==============================
+# ==========================================
 # HEADER
-# ==============================
+# ==========================================
 
 st.markdown(
     '<div class="main-title">'
@@ -376,9 +347,9 @@ st.markdown(
 )
 
 
-# ==============================
+# ==========================================
 # INPUT METHOD
-# ==============================
+# ==========================================
 
 st.subheader("🎙️ Meeting Input")
 
@@ -391,13 +362,12 @@ input_method = st.radio(
     horizontal=True
 )
 
-
 meeting_text = ""
 
 
-# ==============================
-# PASTE TRANSCRIPT
-# ==============================
+# ==========================================
+# PASTE INPUT
+# ==========================================
 
 if input_method == "✍️ Paste Transcript":
 
@@ -407,15 +377,14 @@ if input_method == "✍️ Paste Transcript":
         placeholder=(
             "Example:\n\n"
             "Rahul: I will complete the project by Friday.\n"
-            "Priya: I will review the dataset tomorrow.\n"
-            "Aman: We decided to use Python."
+            "Priya: I will review the dataset tomorrow."
         )
     )
 
 
-# ==============================
+# ==========================================
 # FILE UPLOAD
-# ==============================
+# ==========================================
 
 else:
 
@@ -426,10 +395,8 @@ else:
 
     if uploaded_file is not None:
 
-        meeting_text = (
-            uploaded_file
-            .read()
-            .decode("utf-8")
+        meeting_text = uploaded_file.read().decode(
+            "utf-8"
         )
 
         st.success(
@@ -443,9 +410,9 @@ else:
         )
 
 
-# ==============================
-# DEMO BUTTON
-# ==============================
+# ==========================================
+# DEMO
+# ==========================================
 
 demo_text = """Rahul: We need to complete the NLP project presentation by Friday.
 Priya: I will clean the dataset and submit it tomorrow.
@@ -453,7 +420,6 @@ Aman: I will prepare the introduction and problem statement.
 Rahul: We decided to use Python and Streamlit for the application.
 Priya: The team should review the final model before Monday.
 Aman: This is a high priority task because the presentation is next week."""
-
 
 if st.button(
     "🧪 Load Demo Meeting",
@@ -467,9 +433,9 @@ if st.button(
     )
 
 
-# ==============================
-# ANALYZE BUTTON
-# ==============================
+# ==========================================
+# ANALYZE
+# ==========================================
 
 if st.button(
     "🚀 Analyze Meeting",
@@ -480,7 +446,7 @@ if st.button(
     if not meeting_text.strip():
 
         st.warning(
-            "Please paste a meeting transcript or upload a TXT file."
+            "Please paste a transcript or upload a TXT file."
         )
 
     else:
@@ -494,9 +460,9 @@ if st.button(
         )
 
 
-        # ==========================
+        # ==================================
         # OVERVIEW
-        # ==========================
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -521,7 +487,7 @@ if st.button(
 
         with c3:
             st.metric(
-                "Decisions",
+                "Key Decisions",
                 len(result["key_decisions"])
             )
 
@@ -532,9 +498,9 @@ if st.button(
             )
 
 
-        # ==========================
+        # ==================================
         # SUMMARY
-        # ==========================
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -548,9 +514,9 @@ if st.button(
         )
 
 
-        # ==========================
+        # ==================================
         # PARTICIPANTS
-        # ==========================
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -574,9 +540,9 @@ if st.button(
             )
 
 
-        # ==========================
+        # ==================================
         # ACTION ITEMS
-        # ==========================
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -615,9 +581,9 @@ if st.button(
             )
 
 
-        # ==========================
+        # ==================================
         # KEY DECISIONS
-        # ==========================
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -628,9 +594,7 @@ if st.button(
 
         if result["key_decisions"]:
 
-            for decision in result[
-                "key_decisions"
-            ]:
+            for decision in result["key_decisions"]:
 
                 st.success(
                     f"✓ {decision}"
@@ -643,9 +607,100 @@ if st.button(
             )
 
 
-        # ==========================
-        # INSIGHTS
-        # ==========================
+        # ==================================
+        # ANALYTICS DASHBOARD
+        # ==================================
+
+        st.markdown(
+            '<div class="section-title">'
+            '📈 Analytics Dashboard'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        total_tasks = len(
+            result["action_items"]
+        )
+
+        high_priority_tasks = sum(
+            item["Priority"] == "High"
+            for item in result["action_items"]
+        )
+
+        normal_priority_tasks = (
+            total_tasks - high_priority_tasks
+        )
+
+        participant_counts = Counter(
+            item["Person"]
+            for item in result["action_items"]
+        )
+
+
+        # ----------------------------------
+        # TASK METRICS
+        # ----------------------------------
+
+        a1, a2, a3 = st.columns(3)
+
+        with a1:
+
+            st.metric(
+                "Total Tasks",
+                total_tasks
+            )
+
+        with a2:
+
+            st.metric(
+                "High Priority Tasks",
+                high_priority_tasks
+            )
+
+        with a3:
+
+            st.metric(
+                "Normal Priority Tasks",
+                normal_priority_tasks
+            )
+
+
+        # ----------------------------------
+        # PARTICIPANT WORKLOAD
+        # ----------------------------------
+
+        if participant_counts:
+
+            st.subheader(
+                "👥 Participant Workload"
+            )
+
+            st.bar_chart(
+                dict(participant_counts)
+            )
+
+
+        # ----------------------------------
+        # PRIORITY BREAKDOWN
+        # ----------------------------------
+
+        st.subheader(
+            "🎯 Priority Breakdown"
+        )
+
+        priority_data = {
+            "High Priority": high_priority_tasks,
+            "Normal Priority": normal_priority_tasks
+        }
+
+        st.bar_chart(
+            priority_data
+        )
+
+
+        # ==================================
+        # MEETING INSIGHTS
+        # ==================================
 
         st.markdown(
             '<div class="section-title">'
@@ -678,9 +733,9 @@ if st.button(
             )
 
 
-        # ==========================
+        # ==================================
         # REPORT
-        # ==========================
+        # ==================================
 
         report = f"""
 AI MEETING INTELLIGENCE REPORT
@@ -706,9 +761,7 @@ ACTION ITEMS
 
         report += "\nKEY DECISIONS\n"
 
-        for decision in result[
-            "key_decisions"
-        ]:
+        for decision in result["key_decisions"]:
 
             report += (
                 f"- {decision}\n"

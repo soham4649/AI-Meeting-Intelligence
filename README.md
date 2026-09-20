@@ -4,7 +4,7 @@
 
 ## 🌐 Live Demo
 
-🚀 **Live Application:** Add your deployed Streamlit URL here
+🚀 **Live Application:** https://ai-meeting-intelligence-h5vbncdluzehmnncchlklu.streamlit.app/
 
 ---
 

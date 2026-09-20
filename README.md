@@ -124,3 +124,25 @@ NLP Analysis
 Analytics Dashboard
         ↓
 Downloadable Report
+
+## 📸 Project Demo
+
+### Live Application
+
+🚀 [Open AI Meeting Intelligence](https://ai-meeting-intelligence-h5vbncdluzehmnncchlklu.streamlit.app/)
+
+The application allows users to enter or upload a meeting transcript and automatically generate structured meeting insights.
+
+### Sample Output
+
+The system provides:
+
+- Meeting summary
+- Participants
+- Action items
+- Deadlines
+- Key decisions
+- Priority analysis
+- Meeting tone
+- Analytics dashboard
+- Downloadable report

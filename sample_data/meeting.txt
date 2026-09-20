@@ -1,0 +1,15 @@
+Rahul: Good morning everyone. Let's begin with the project status update.
+
+Priya: I will finish the API integration by Wednesday.
+
+Aman: I will update the dashboard design by Thursday.
+
+Neha: I will clean the dataset and submit the final version tomorrow.
+
+Rahul: We agreed to use Streamlit for the initial deployment.
+
+Priya: I will review the model results this week.
+
+Neha: The team should complete system testing before Monday.
+
+Rahul: The final project review is scheduled for Friday.
